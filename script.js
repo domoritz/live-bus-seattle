@@ -11,6 +11,8 @@ $(function() {
         layers: [osm]
     });
 
+    L.control.locate().addTo(map);
+
     function debug(val) {
       console.log(val);
     }
@@ -51,3 +53,4 @@ $(function() {
 
     var hash = new L.Hash(map);
 });
+
