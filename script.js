@@ -10,6 +10,7 @@ $(function() {
     });
 
     $.getJSON('http://api.onebusaway.org/api/where/vehicles-for-agency/1.json?key=TEST&callback=?', function(data) {
+        console.log(data);
     });
 
     var hash = new L.Hash(map);
