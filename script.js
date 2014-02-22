@@ -50,12 +50,19 @@ $(function() {
                 body += L.Util.template(templates.row, {key: key, value: value});
             });
             var popupContent = L.Util.template(templates.table, {body: body});
-            L.marker([vehicle.lat, vehicle.lon]).bindPopup(popupContent).addTo(map);
+            L.marker([vehicle.lat, vehicle.lon])
+                //.bindPopup(popupContent)
+                .on('click', function(e) {
+                    websocket.send(JSON.stringify({type: "trip_polyline", trip_uid: vehicle.dataProvider + "/" + vehicle.tripId}))
+            }).addTo(map);
         });
       } else if (data.type == 'remove_vehicle') {
         debug('remove');
+      } else if (data.type == 'trip_polyline') {
+        debug(data);
+        L.Polyline.fromEncoded(data.polyline).addTo(map);
       } else {
-        debug('unknown', data)
+        debug(data);
       }
     }
 
