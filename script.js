@@ -19,7 +19,11 @@ $(function() {
 
     L.control.locate().addTo(map);
 
+    // the markers
     var markers = {};
+
+    // the line
+    var line;
 
     function debug(val) {
       console.log(val);
@@ -65,8 +69,14 @@ $(function() {
       } else if (data.type == 'remove_vehicle') {
         debug('remove');
       } else if (data.type == 'trip_polyline') {
-        debug(data);
-        L.Polyline.fromEncoded(data.polyline).addTo(map);
+        if (line !== undefined) {
+            map.removeLayer(line);
+        };
+        line = L.Polyline.fromEncoded(data.polyline, {
+            color: 'red',
+            weight: 3,
+            opacity: .9
+        }).addTo(map);
       } else {
         debug(data);
       }
