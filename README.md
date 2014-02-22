@@ -1,4 +1,1 @@
-live-bus-seattle
-================
-
-Live bus map for seattle
+# Seattle live buses
