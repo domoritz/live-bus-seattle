@@ -17,6 +17,8 @@ $(function() {
 
     L.control.locate().addTo(map);
 
+    var markers = {};
+
     function debug(val) {
       console.log(val);
     }
@@ -42,6 +44,8 @@ $(function() {
     function onWsMessage(evt) {
       var data = JSON.parse(evt.data);
       if (data.type == 'update_vehicle') {
+        var vehicle = data.vehicle;
+        markers[vehicle.vehicleId].setLatLng([vehicle.lat, vehicle.lon])
       } else if (data.type == 'init') {
         data.vehicles.forEach(function(vehicle) {
             var body = '';
@@ -49,11 +53,12 @@ $(function() {
                 body += L.Util.template(templates.row, {key: key, value: value});
             });
             var popupContent = L.Util.template(templates.table, {body: body});
-            L.marker([vehicle.lat, vehicle.lon])
+            markers[vehicle.vehicleId] = L.marker([vehicle.lat, vehicle.lon])
                 //.bindPopup(popupContent)
                 .on('click', function(e) {
                     websocket.send(JSON.stringify({type: "trip_polyline", trip_uid: vehicle.dataProvider + "/" + vehicle.tripId}))
-            }).addTo(map);
+                })
+                .addTo(map);
         });
       } else if (data.type == 'remove_vehicle') {
         debug('remove');
