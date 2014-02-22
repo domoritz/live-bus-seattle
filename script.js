@@ -82,6 +82,7 @@ $(function() {
       }
     }
 
+    // start by connecting to the web socket
     wsConnect();
 
     var hash = new L.Hash(map);
