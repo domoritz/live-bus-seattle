@@ -1,8 +1,4 @@
 $(function() {
-    var osm = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-    });
-
     var wsUri = 'ws://busdrone.com:28737/';
 
     var templates = {
@@ -12,9 +8,12 @@ $(function() {
 
     var map = L.map('map', {
         center: [47.6210, -122.3328],
-        zoom: 13,
-        layers: [osm]
+        zoom: 13
     });
+
+    var mapboxTiles = L.tileLayer('https://{s}.tiles.mapbox.com/v3/domoritz.h6ibh733/{z}/{x}/{y}.png', {
+        attribution: '<a href="http://www.mapbox.com/about/maps/" target="_blank">Terms &amp; Feedback</a>'
+    }).addTo(map);
 
     L.control.locate().addTo(map);
 
