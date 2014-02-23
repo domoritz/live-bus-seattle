@@ -66,7 +66,9 @@ $(function() {
         } else if (data.type == 'init') {
             data.vehicles.forEach(addVehicle);
         } else if (data.type == 'remove_vehicle') {
-            map.removeLayer(data.markers[vehicle.vehicleId]);
+            if (data !== undefined) {
+                map.removeLayer(data.markers[vehicle.vehicleId]);
+            }
         } else if (data.type == 'trip_polyline') {
             if (routeLine !== undefined) {
                 map.removeLayer(routeLine);
