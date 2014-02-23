@@ -3,7 +3,9 @@ $(function() {
 
     var templates = {
         table: '<table><tbody>{body}</tbody></table>',
-        row:'<tr><th>{key}</th><td>{value}</td></tr>'
+        row:'<tr><th>{key}</th><td>{value}</td></tr>',
+        link:'<tr><th>{key}</th><td><a href="{href}" target="_blank">{title}</a></td></tr>',
+        busMarker: '<i class="bus-icon"></i><span class="bus-route">{route}</span>'
     };
 
     var map = L.map('map', {
@@ -48,12 +50,23 @@ $(function() {
             jQuery.each(vehicle, function(key, value){
                 body += L.Util.template(templates.row, {key: key, value: value});
             });
+            trip_status_url = "http://api.pugetsound.onebusaway.org/api/where/trip-for-vehicle/" + vehicle.vehicleId + ".json?key=TEST";
+            body += L.Util.template(templates.link, {key: "OneBusAway API", title: "Trip Status", href: trip_status_url});
+            
+            icon = new L.divIcon({
+                iconSize: 30,
+                className: "bus",
+                html: L.Util.template(templates.busMarker, {route: vehicle.route || "missing"})
+            });
+            
+            
             var popupContent = L.Util.template(templates.table, {body: body});
-            L.marker([vehicle.lat, vehicle.lon])
+            L.marker([vehicle.lat, vehicle.lon], {icon: icon})
                 //.bindPopup(popupContent)
                 .on('click', function(e) {
                     websocket.send(JSON.stringify({type: "trip_polyline", trip_uid: vehicle.dataProvider + "/" + vehicle.tripId}))
-            }).addTo(map);
+                })
+                .addTo(map);
         });
       } else if (data.type == 'remove_vehicle') {
         debug('remove');

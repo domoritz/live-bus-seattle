@@ -9,3 +9,18 @@ html, body {
   width: 100%;
   height: 100%;
 }
+
+.bus-route {
+  background-color: yellow;
+  width: 29px;
+  text-align: center;
+  margin: -1px 8px 0;
+  font-size: 10px;
+  display: block;
+}
+i.bus-icon {
+  background: url(images/bus.png);
+  width: 45px;
+  height: 15px;
+  display: block;
+}
