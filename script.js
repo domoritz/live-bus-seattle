@@ -5,7 +5,7 @@ $(function() {
         table: '<table><tbody>{body}</tbody></table>',
         row:'<tr><th>{key}</th><td>{value}</td></tr>',
         link:'<tr><th>{key}</th><td><a href="{href}" target="_blank">{title}</a></td></tr>',
-        busMarker: '<div class="bus-route">{route}</div>'
+        busMarker: '<div class="bus-route" style="border-bottom-color: {color};">{route}</div>'
     };
 
     var osm = L.tileLayer('http://{s}.tile2.opencyclemap.org/transport/{z}/{x}/{y}.png', {
@@ -88,7 +88,7 @@ $(function() {
         var icon = new L.divIcon({
             iconSize: 30,
             className: "bus",
-            html: L.Util.template(templates.busMarker, {route: vehicle.route || "missing"})
+            html: L.Util.template(templates.busMarker, {route: vehicle.route, color: vehicle.color.substring(0,7)})
         });
 
         var popupContent = L.Util.template(templates.table, {body: body});

@@ -13,12 +13,13 @@ html, body {
 .bus-route {
   background-color: #666;
   border: 1px solid #222;
+  border-bottom-width: 6px;
   color: white;
   padding: 0px 3px;
-  font-size: 10px;
+  font-size: 11px;
   box-sizing: content-box !important;
   -webkit-box-sizing: content-box !important;
   opacity: .8;
   text-align: center;
-  line-height: 13px;
+  line-height: 14px;
 }
