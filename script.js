@@ -5,7 +5,7 @@ $(function() {
         table: '<table><tbody>{body}</tbody></table>',
         row:'<tr><th>{key}</th><td>{value}</td></tr>',
         link:'<tr><th>{key}</th><td><a href="{href}" target="_blank">{title}</a></td></tr>',
-        busMarker: '<i title="{title}" class="bus-icon"></i><span class="bus-route" style="background-color:{color}">{route}</span>'
+        busMarker: '<div class="bus-route" style="border-bottom-color: {color};">{route}</div>'
     };
 
     var osm = L.tileLayer('http://{s}.tile2.opencyclemap.org/transport/{z}/{x}/{y}.png', {
@@ -51,49 +51,61 @@ $(function() {
 
     function onWsMessage(evt) {
       var data = JSON.parse(evt.data);
+
       if (data.type == 'update_vehicle') {
-        var vehicle = data.vehicle;
-        markers[vehicle.vehicleId].setLatLng([vehicle.lat, vehicle.lon])
-      } else if (data.type == 'init') {
-        data.vehicles.forEach(function(vehicle) {
-            var body = '';
-            jQuery.each(vehicle, function(key, value){
-                body += L.Util.template(templates.row, {key: key, value: value});
-            });
-            trip_status_url = "http://api.pugetsound.onebusaway.org/api/where/trip-for-vehicle/" + vehicle.vehicleId + ".json?key=TEST&callback=?";
-            body += L.Util.template(templates.link, {key: "OneBusAway API", title: "Trip Status", href: trip_status_url});
-            
-            icon = new L.divIcon({
-                iconSize: 30,
-                className: "bus",
-                html: L.Util.template(templates.busMarker, {route: vehicle.route || "missing", color: vehicle.color.substring(0,7), title: "On time?"})
-            });            
-            
-            var popupContent = L.Util.template(templates.table, {body: body});
-            markers[vehicle.vehicleId] = L.marker([vehicle.lat, vehicle.lon], {icon: icon})
-                //.bindPopup(popupContent)
-                .on('click', function(e) {
-                    websocket.send(JSON.stringify({type: "trip_polyline", trip_uid: vehicle.dataProvider + "/" + vehicle.tripId}))
-                    jQuery.getJSON(trip_status_url, null, function(response) {
-                      window.alert("Bus is " + Math.round(response.data.entry.status.scheduleDeviation / 60) + " minutes late")
-                    });
-                })
-                .addTo(map);
+            var vehicle = data.vehicle;
+            var marker = markers[vehicle.vehicleId];
+            if (marker === undefined) {
+                marker = addVehicle(data.vehicle);
+            }
+            marker.setLatLng([vehicle.lat, vehicle.lon]);
+        } else if (data.type == 'init') {
+            data.vehicles.forEach(addVehicle);
+        } else if (data.type == 'remove_vehicle') {
+            map.removeLayer(data.markers[vehicle.vehicleId]);
+        } else if (data.type == 'trip_polyline') {
+            if (line !== undefined) {
+                map.removeLayer(line);
+            }
+            line = L.Polyline.fromEncoded(data.polyline, {
+                color: 'red',
+                weight: 3,
+                opacity: .9
+            }).addTo(map);
+        } else {
+            debug(data);
+        }
+    }
+
+    function addVehicle(vehicle) {
+        var body = '';
+        jQuery.each(vehicle, function(key, value){
+            body += L.Util.template(templates.row, {key: key, value: value});
         });
-      } else if (data.type == 'remove_vehicle') {
-        debug('remove');
-      } else if (data.type == 'trip_polyline') {
-        if (line !== undefined) {
-            map.removeLayer(line);
-        };
-        line = L.Polyline.fromEncoded(data.polyline, {
-            color: 'red',
-            weight: 3,
-            opacity: .9
-        }).addTo(map);
-      } else {
-        debug(data);
-      }
+        trip_status_url = "http://api.pugetsound.onebusaway.org/api/where/trip-for-vehicle/" + vehicle.vehicleId + ".json?key=TEST&callback=?";
+        body += L.Util.template(templates.link, {key: "OneBusAway API", title: "Trip Status", href: trip_status_url});
+
+        var icon = new L.divIcon({
+            iconSize: 30,
+            className: "bus",
+            html: L.Util.template(templates.busMarker, {route: vehicle.route, color: vehicle.color.substring(0,7)})
+        });
+
+        var popupContent = L.Util.template(templates.table, {body: body});
+        markers[vehicle.vehicleId] = L.marker([vehicle.lat, vehicle.lon], {icon: icon})
+            //.bindPopup(popupContent)
+            .on('click', function(e) {
+                websocket.send(JSON.stringify({type: "trip_polyline", trip_uid: vehicle.dataProvider + "/" + vehicle.tripId}))
+                jQuery.getJSON(trip_status_url, null, function(response) {
+                  window.alert("Bus is " + Math.round(response.data.entry.status.scheduleDeviation / 60) + " minutes late")
+                });
+            })
+            .addTo(map);
+    }
+
+    function getAge(vehicle) {
+      var vehicle = (new Date() - vehicle.timestamp) / 1000 / 60;
+      return vehicle;
     }
 
     // start by connecting to the web socket
