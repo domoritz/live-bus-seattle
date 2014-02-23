@@ -8,16 +8,24 @@ $(function() {
         busMarker: '<i class="bus-icon"></i><span class="bus-route">{route}</span>'
     };
 
-    var map = L.map('map', {
-        center: [47.6210, -122.3328],
-        zoom: 13
+    var osm = L.tileLayer('http://{s}.tile2.opencyclemap.org/transport/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors,' +
+            'tiles from <a href="http://www.opencyclemap.org/">OpenTransportMap</a>'
     });
 
-    var mapboxTiles = L.tileLayer('https://{s}.tiles.mapbox.com/v3/domoritz.h6ibh733/{z}/{x}/{y}.png', {
-        attribution: '<a href="http://www.mapbox.com/about/maps/" target="_blank">Terms &amp; Feedback</a>'
-    }).addTo(map);
+    var map = L.map('map', {
+        center: [47.6210, -122.3328],
+        zoom: 13,
+        layers: [osm]
+    });
 
     L.control.locate().addTo(map);
+
+    // the markers
+    var markers = {};
+
+    // the line
+    var line;
 
     function debug(val) {
       console.log(val);
@@ -44,6 +52,8 @@ $(function() {
     function onWsMessage(evt) {
       var data = JSON.parse(evt.data);
       if (data.type == 'update_vehicle') {
+        var vehicle = data.vehicle;
+        markers[vehicle.vehicleId].setLatLng([vehicle.lat, vehicle.lon])
       } else if (data.type == 'init') {
         data.vehicles.forEach(function(vehicle) {
             var body = '';
@@ -61,7 +71,7 @@ $(function() {
             
             
             var popupContent = L.Util.template(templates.table, {body: body});
-            L.marker([vehicle.lat, vehicle.lon], {icon: icon})
+            markers[vehicle.vehicleId] = L.marker([vehicle.lat, vehicle.lon], {icon: icon})
                 //.bindPopup(popupContent)
                 .on('click', function(e) {
                     websocket.send(JSON.stringify({type: "trip_polyline", trip_uid: vehicle.dataProvider + "/" + vehicle.tripId}))
@@ -71,13 +81,20 @@ $(function() {
       } else if (data.type == 'remove_vehicle') {
         debug('remove');
       } else if (data.type == 'trip_polyline') {
-        debug(data);
-        L.Polyline.fromEncoded(data.polyline).addTo(map);
+        if (line !== undefined) {
+            map.removeLayer(line);
+        };
+        line = L.Polyline.fromEncoded(data.polyline, {
+            color: 'red',
+            weight: 3,
+            opacity: .9
+        }).addTo(map);
       } else {
         debug(data);
       }
     }
 
+    // start by connecting to the web socket
     wsConnect();
 
     var hash = new L.Hash(map);
