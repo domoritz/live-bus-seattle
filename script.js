@@ -38,12 +38,12 @@ $(function() {
     }
 
     function wsConnect() {
-      debug('Connecting to ' + wsUri);
-      websocket = new WebSocket(wsUri);
-      websocket.onopen = function(evt) { onWsOpen(evt) };
-      websocket.onmessage = function(evt) { onWsMessage(evt) };
-      websocket.onerror = function(evt) { onWsError(evt) };
-      websocket.onclose = function(evt) { onWsClose(evt) };
+        debug('Connecting to ' + wsUri);
+        websocket = new WebSocket(wsUri);
+        websocket.onopen = onWsOpen;
+        websocket.onmessage = onWsMessage;
+        websocket.onerror = onWsError;
+        websocket.onclose = onWsClose;
     }
 
     function onWsOpen(evt) {
@@ -86,6 +86,11 @@ $(function() {
             debug("undefined");
             debug(data);
         }
+    }
+
+    function onWsError(evt) {
+        debug("error");
+        debug(evt.data);
     }
 
     function addVehicle(vehicle) {
