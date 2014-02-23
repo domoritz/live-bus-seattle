@@ -5,7 +5,7 @@ $(function() {
         table: '<table><tbody>{body}</tbody></table>',
         row:'<tr><th>{key}</th><td>{value}</td></tr>',
         link:'<tr><th>{key}</th><td><a href="{href}" target="_blank">{title}</a></td></tr>',
-        busMarker: '<i class="bus-icon"></i><span class="bus-route">{route}</span>'
+        busMarker: '<i title="{title}" class="bus-icon"></i><span class="bus-route" style="background-color:{color}">{route}</span>'
     };
 
     var osm = L.tileLayer('http://{s}.tile2.opencyclemap.org/transport/{z}/{x}/{y}.png', {
@@ -60,21 +60,23 @@ $(function() {
             jQuery.each(vehicle, function(key, value){
                 body += L.Util.template(templates.row, {key: key, value: value});
             });
-            trip_status_url = "http://api.pugetsound.onebusaway.org/api/where/trip-for-vehicle/" + vehicle.vehicleId + ".json?key=TEST";
+            trip_status_url = "http://api.pugetsound.onebusaway.org/api/where/trip-for-vehicle/" + vehicle.vehicleId + ".json?key=TEST&callback=?";
             body += L.Util.template(templates.link, {key: "OneBusAway API", title: "Trip Status", href: trip_status_url});
             
             icon = new L.divIcon({
                 iconSize: 30,
                 className: "bus",
-                html: L.Util.template(templates.busMarker, {route: vehicle.route || "missing"})
-            });
-            
+                html: L.Util.template(templates.busMarker, {route: vehicle.route || "missing", color: vehicle.color.substring(0,7), title: "On time?"})
+            });            
             
             var popupContent = L.Util.template(templates.table, {body: body});
             markers[vehicle.vehicleId] = L.marker([vehicle.lat, vehicle.lon], {icon: icon})
                 //.bindPopup(popupContent)
                 .on('click', function(e) {
                     websocket.send(JSON.stringify({type: "trip_polyline", trip_uid: vehicle.dataProvider + "/" + vehicle.tripId}))
+                    jQuery.getJSON(trip_status_url, null, function(response) {
+                      window.alert("Bus is " + Math.round(response.data.entry.status.scheduleDeviation / 60) + " minutes late")
+                    });
                 })
                 .addTo(map);
         });
