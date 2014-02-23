@@ -61,6 +61,10 @@ $(function() {
       if (data.type == 'update_vehicle') {
             var vehicle = data.vehicle;
             var marker = markers[vehicle.uid];
+            if (getAge(vehicle) > 5) {
+                removeVehicle(vehicle.uid);
+                return;
+            }
             if (marker == undefined) {
                 marker = addVehicle(data.vehicle);
             }
@@ -71,8 +75,7 @@ $(function() {
         } else if (data.type == 'init') {
             data.vehicles.forEach(addVehicle);
         } else if (data.type == 'remove_vehicle') {
-            map.removeLayer(markers[data.vehicle_uid]);
-            delete markers[data.vehicle_uid];
+            removeVehicle(data.vehicle_uid);
         } else if (data.type == 'trip_polyline') {
             if (routeLine !== undefined) {
                 map.removeLayer(routeLine);
@@ -126,9 +129,15 @@ $(function() {
         return marker;
     }
 
+    function removeVehicle(vehicle_uid) {
+        map.removeLayer(markers[vehicle_uid]);
+        delete markers[vehicle_uid];
+    }
+
+    // returns the age in minutes
     function getAge(vehicle) {
-      var vehicle = (new Date() - vehicle.timestamp) / 1000 / 60;
-      return vehicle;
+        var ageMins = (new Date() - vehicle.timestamp) / 1000 / 60;
+        return ageMins;
     }
 
     // start by connecting to the web socket
