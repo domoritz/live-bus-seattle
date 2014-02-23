@@ -15,11 +15,17 @@ $(function() {
 
     var map = L.map('map', {
         center: [47.6210, -122.3328],
-        zoom: 13,
+        zoom: 12,
         layers: [osm]
     });
 
-    L.control.locate().addTo(map);
+    L.control.locate({
+        locateOptions: {
+            maxZoom: 16
+        }
+    }).addTo(map);
+
+    var hash = new L.Hash(map);
 
     // the markers
     var markers = {};
@@ -54,21 +60,19 @@ $(function() {
 
       if (data.type == 'update_vehicle') {
             var vehicle = data.vehicle;
-            var marker = markers[vehicle.vehicleId];
+            var marker = markers[vehicle.uid];
             if (marker == undefined) {
                 marker = addVehicle(data.vehicle);
             }
             var line = L.polyline([marker.getLatLng(), [vehicle.lat, vehicle.lon]])
             marker.stop();
             marker.setLine(line.getLatLngs());
-            //debug(line.getLatLngs());
             marker.start();
         } else if (data.type == 'init') {
             data.vehicles.forEach(addVehicle);
         } else if (data.type == 'remove_vehicle') {
-            if (data !== undefined) {
-                map.removeLayer(data.markers[vehicle.vehicleId]);
-            }
+            map.removeLayer(markers[data.vehicle_uid]);
+            delete markers[data.vehicle_uid];
         } else if (data.type == 'trip_polyline') {
             if (routeLine !== undefined) {
                 map.removeLayer(routeLine);
@@ -101,7 +105,7 @@ $(function() {
         var popupContent = L.Util.template(templates.table, {body: body});
         var line = L.polyline([[vehicle.lat, vehicle.lon], [vehicle.lat, vehicle.lon]]);
         marker = L.animatedMarker(line.getLatLngs(), {
-                interval: 2000, // milliseconds
+                interval: 3000, // milliseconds
                 icon: icon,
                 clickable: true
             })
@@ -113,7 +117,7 @@ $(function() {
                 // });
             })
             .addTo(map);
-        markers[vehicle.vehicleId] = marker;
+        markers[vehicle.uid] = marker;
         return marker;
     }
 
@@ -124,7 +128,5 @@ $(function() {
 
     // start by connecting to the web socket
     wsConnect();
-
-    var hash = new L.Hash(map);
 });
 
