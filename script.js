@@ -79,26 +79,25 @@ $(function() {
 
     function addVehicle(vehicle) {
         var body = '';
-            jQuery.each(vehicle, function(key, value){
-                body += L.Util.template(templates.row, {key: key, value: value});
-            });
-            trip_status_url = "http://api.pugetsound.onebusaway.org/api/where/trip-for-vehicle/" + vehicle.vehicleId + ".json?key=TEST";
-            body += L.Util.template(templates.link, {key: "OneBusAway API", title: "Trip Status", href: trip_status_url});
-            
-            icon = new L.divIcon({
-                iconSize: 30,
-                className: "bus",
-                html: L.Util.template(templates.busMarker, {route: vehicle.route || "missing"})
-            });
-            
-            
-            var popupContent = L.Util.template(templates.table, {body: body});
-            markers[vehicle.vehicleId] = L.marker([vehicle.lat, vehicle.lon], {icon: icon})
-                //.bindPopup(popupContent)
-                .on('click', function(e) {
-                    websocket.send(JSON.stringify({type: "trip_polyline", trip_uid: vehicle.dataProvider + "/" + vehicle.tripId}))
-                })
-                .addTo(map);
+        jQuery.each(vehicle, function(key, value){
+            body += L.Util.template(templates.row, {key: key, value: value});
+        });
+        trip_status_url = "http://api.pugetsound.onebusaway.org/api/where/trip-for-vehicle/" + vehicle.vehicleId + ".json?key=TEST";
+        body += L.Util.template(templates.link, {key: "OneBusAway API", title: "Trip Status", href: trip_status_url});
+
+        icon = new L.divIcon({
+            iconSize: 30,
+            className: "bus",
+            html: L.Util.template(templates.busMarker, {route: vehicle.route || "missing"})
+        });
+
+        var popupContent = L.Util.template(templates.table, {body: body});
+        markers[vehicle.vehicleId] = L.marker([vehicle.lat, vehicle.lon], {icon: icon})
+            //.bindPopup(popupContent)
+            .on('click', function(e) {
+                websocket.send(JSON.stringify({type: "trip_polyline", trip_uid: vehicle.dataProvider + "/" + vehicle.tripId}))
+            })
+            .addTo(map);
     }
 
     function getAge(vehicle) {
