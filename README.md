@@ -1,5 +1,7 @@
 # Seattle live buses
 
+Built on top of [Busdrone](https://github.com/afiler/busdrone/).
+
 ## You want to go to the map
 
 [Go to the live version](https://domoritz.github.com/live-bus-seattle).
