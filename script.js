@@ -24,8 +24,8 @@ $(function() {
     // the markers
     var markers = {};
 
-    // the line
-    var line;
+    // the routeLine
+    var routeLine;
 
     function debug(val) {
       console.log(val);
@@ -58,16 +58,20 @@ $(function() {
             if (marker == undefined) {
                 marker = addVehicle(data.vehicle);
             }
-            marker.setLatLng([vehicle.lat, vehicle.lon]);
+            var line = L.polyline([marker.getLatLng(), [vehicle.lat, vehicle.lon]])
+            marker.stop();
+            marker.setLine(line.getLatLngs());
+            //debug(line.getLatLngs());
+            marker.start();
         } else if (data.type == 'init') {
             data.vehicles.forEach(addVehicle);
         } else if (data.type == 'remove_vehicle') {
             map.removeLayer(data.markers[vehicle.vehicleId]);
         } else if (data.type == 'trip_polyline') {
-            if (line !== undefined) {
-                map.removeLayer(line);
+            if (routeLine !== undefined) {
+                map.removeLayer(routeLine);
             }
-            line = L.Polyline.fromEncoded(data.polyline, {
+            routeLine = L.Polyline.fromEncoded(data.polyline, {
                 color: 'red',
                 weight: 3,
                 opacity: .9
@@ -93,13 +97,18 @@ $(function() {
         });
 
         var popupContent = L.Util.template(templates.table, {body: body});
-        marker = L.marker([vehicle.lat, vehicle.lon], {icon: icon})
+        var line = L.polyline([[vehicle.lat, vehicle.lon], [vehicle.lat, vehicle.lon]]);
+        marker = L.animatedMarker(line.getLatLngs(), {
+                interval: 2000, // milliseconds
+                icon: icon,
+                clickable: true
+            })
             //.bindPopup(popupContent)
             .on('click', function(e) {
                 websocket.send(JSON.stringify({type: "trip_polyline", trip_uid: vehicle.dataProvider + "/" + vehicle.tripId}))
-                jQuery.getJSON(trip_status_url, null, function(response) {
-                  window.alert("Bus is " + Math.round(response.data.entry.status.scheduleDeviation / 60) + " minutes late")
-                });
+                // jQuery.getJSON(trip_status_url, null, function(response) {
+                //   window.alert("Bus is " + Math.round(response.data.entry.status.scheduleDeviation / 60) + " minutes late")
+                // });
             })
             .addTo(map);
         markers[vehicle.vehicleId] = marker;
