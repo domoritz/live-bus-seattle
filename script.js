@@ -5,7 +5,8 @@ $(function() {
         table: '<table><tbody>{body}</tbody></table>',
         row:'<tr><th>{key}</th><td>{value}</td></tr>',
         link:'<tr><th>{key}</th><td><a href="{href}" target="_blank">{title}</a></td></tr>',
-        busMarker: '<div class="bus-route" style="border-bottom-color: {color};">{route}</div>'
+        busMarker: '<div class="bus-route" style="border-bottom-color: {color};" title="{title}">{route}</div>',
+        busMarkerTitle: '{destination}\nCurrent direction: {direction}'
     };
 
     var osm = L.tileLayer('http://{s}.tile2.opencyclemap.org/transport/{z}/{x}/{y}.png', {
@@ -22,8 +23,11 @@ $(function() {
     L.control.locate({
         locateOptions: {
             maxZoom: 16
-        }
+        },
+        follow: true
     }).addTo(map);
+
+    L.control.scale().addTo(map);
 
     var hash = new L.Hash(map);
 
@@ -68,6 +72,11 @@ $(function() {
             if (marker == undefined) {
                 marker = addVehicle(data.vehicle);
             }
+            // update the direction
+            $(marker._icon).attr('title', L.Util.template(templates.busMarkerTitle, {
+                destination: vehicle.destination,
+                direction: getDir(vehicle.heading)
+            }));
             var line = L.polyline([marker.getLatLng(), [vehicle.lat, vehicle.lon]])
             marker.stop();
             marker.setLine(line.getLatLngs());
@@ -107,13 +116,20 @@ $(function() {
         var icon = new L.divIcon({
             iconSize: 30,
             className: "bus",
-            html: L.Util.template(templates.busMarker, {route: vehicle.route, color: vehicle.color.substring(0,7)})
+            html: L.Util.template(templates.busMarker, {
+                route: vehicle.route,
+                color: vehicle.color.substring(0,7),
+                title: L.Util.template(templates.busMarkerTitle, {
+                    destination: vehicle.destination,
+                    direction: getDir(vehicle.heading)
+                })
+            })
         });
 
         var popupContent = L.Util.template(templates.table, {body: body});
         var line = L.polyline([[vehicle.lat, vehicle.lon], [vehicle.lat, vehicle.lon]]);
         marker = L.animatedMarker(line.getLatLngs(), {
-                interval: 3000, // milliseconds
+                interval: 2000, // milliseconds
                 icon: icon,
                 clickable: true
             })
@@ -126,6 +142,10 @@ $(function() {
             })
             .addTo(map);
         markers[vehicle.uid] = marker;
+
+        // bind popups for all vehicles
+        $('.bus-route').tooltip();
+
         return marker;
     }
 
@@ -138,6 +158,12 @@ $(function() {
     function getAge(vehicle) {
         var ageMins = (new Date() - vehicle.timestamp) / 1000 / 60;
         return ageMins;
+    }
+
+    // returns the direction for a heading in degrees
+    function getDir(heading) {
+        var dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW', 'N'];
+        return dirs[Math.round(heading/22.5)];
     }
 
     // start by connecting to the web socket

@@ -22,4 +22,10 @@ html, body {
   opacity: .8;
   text-align: center;
   line-height: 14px;
+  margin-top: -8px;  /*So that the actual location is in the center of the marker*/
+}
+
+.tooltip-inner {
+  white-space: pre;
+  max-width: none;
 }
