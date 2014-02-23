@@ -11,8 +11,8 @@ html, body {
 }
 
 .bus-route {
-  background-color: #666;
-  border: 1px solid #222;
+  background-color: #444;
+  border-bottom-style: solid;
   border-bottom-width: 6px;
   color: white;
   padding: 0px 3px;

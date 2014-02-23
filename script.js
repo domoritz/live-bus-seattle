@@ -55,7 +55,7 @@ $(function() {
       if (data.type == 'update_vehicle') {
             var vehicle = data.vehicle;
             var marker = markers[vehicle.vehicleId];
-            if (marker === undefined) {
+            if (marker == undefined) {
                 marker = addVehicle(data.vehicle);
             }
             marker.setLatLng([vehicle.lat, vehicle.lon]);
@@ -73,6 +73,7 @@ $(function() {
                 opacity: .9
             }).addTo(map);
         } else {
+            debug("undefined");
             debug(data);
         }
     }
@@ -92,7 +93,7 @@ $(function() {
         });
 
         var popupContent = L.Util.template(templates.table, {body: body});
-        markers[vehicle.vehicleId] = L.marker([vehicle.lat, vehicle.lon], {icon: icon})
+        marker = L.marker([vehicle.lat, vehicle.lon], {icon: icon})
             //.bindPopup(popupContent)
             .on('click', function(e) {
                 websocket.send(JSON.stringify({type: "trip_polyline", trip_uid: vehicle.dataProvider + "/" + vehicle.tripId}))
@@ -101,6 +102,8 @@ $(function() {
                 });
             })
             .addTo(map);
+        markers[vehicle.vehicleId] = marker;
+        return marker;
     }
 
     function getAge(vehicle) {
