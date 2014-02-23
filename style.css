@@ -11,16 +11,14 @@ html, body {
 }
 
 .bus-route {
-  background-color: yellow;
-  width: 29px;
-  text-align: center;
-  margin: -1px 8px 0;
+  background-color: #666;
+  border: 1px solid #222;
+  color: white;
+  padding: 0px 3px;
   font-size: 10px;
-  display: block;
-}
-i.bus-icon {
-  background: url(images/bus.png);
-  width: 45px;
-  height: 15px;
-  display: block;
+  box-sizing: content-box !important;
+  -webkit-box-sizing: content-box !important;
+  opacity: .8;
+  text-align: center;
+  line-height: 13px;
 }

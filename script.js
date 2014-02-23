@@ -5,7 +5,7 @@ $(function() {
         table: '<table><tbody>{body}</tbody></table>',
         row:'<tr><th>{key}</th><td>{value}</td></tr>',
         link:'<tr><th>{key}</th><td><a href="{href}" target="_blank">{title}</a></td></tr>',
-        busMarker: '<i class="bus-icon"></i><span class="bus-route">{route}</span>'
+        busMarker: '<div class="bus-route">{route}</div>'
     };
 
     var osm = L.tileLayer('http://{s}.tile2.opencyclemap.org/transport/{z}/{x}/{y}.png', {
@@ -85,7 +85,7 @@ $(function() {
         trip_status_url = "http://api.pugetsound.onebusaway.org/api/where/trip-for-vehicle/" + vehicle.vehicleId + ".json?key=TEST";
         body += L.Util.template(templates.link, {key: "OneBusAway API", title: "Trip Status", href: trip_status_url});
 
-        icon = new L.divIcon({
+        var icon = new L.divIcon({
             iconSize: 30,
             className: "bus",
             html: L.Util.template(templates.busMarker, {route: vehicle.route || "missing"})
