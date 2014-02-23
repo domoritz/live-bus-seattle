@@ -77,6 +77,7 @@ $(function() {
                 destination: vehicle.destination,
                 direction: getDir(vehicle.heading)
             }));
+            $('.bus-route').tooltip();
             var line = L.polyline([marker.getLatLng(), [vehicle.lat, vehicle.lon]])
             marker.stop();
             marker.setLine(line.getLatLngs());
