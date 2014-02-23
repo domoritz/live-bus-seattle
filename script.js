@@ -51,12 +51,34 @@ $(function() {
 
     function onWsMessage(evt) {
       var data = JSON.parse(evt.data);
+
       if (data.type == 'update_vehicle') {
-        var vehicle = data.vehicle;
-        markers[vehicle.vehicleId].setLatLng([vehicle.lat, vehicle.lon])
-      } else if (data.type == 'init') {
-        data.vehicles.forEach(function(vehicle) {
-            var body = '';
+            var vehicle = data.vehicle;
+            var marker = markers[vehicle.vehicleId];
+            if (marker === undefined) {
+                marker = addVehicle(data.vehicle);
+            }
+            marker.setLatLng([vehicle.lat, vehicle.lon]);
+        } else if (data.type == 'init') {
+            data.vehicles.forEach(addVehicle);
+        } else if (data.type == 'remove_vehicle') {
+            map.removeLayer(data.markers[vehicle.vehicleId]);
+        } else if (data.type == 'trip_polyline') {
+            if (line !== undefined) {
+                map.removeLayer(line);
+            }
+            line = L.Polyline.fromEncoded(data.polyline, {
+                color: 'red',
+                weight: 3,
+                opacity: .9
+            }).addTo(map);
+        } else {
+            debug(data);
+        }
+    }
+
+    function addVehicle(vehicle) {
+        var body = '';
             jQuery.each(vehicle, function(key, value){
                 body += L.Util.template(templates.row, {key: key, value: value});
             });
@@ -77,21 +99,11 @@ $(function() {
                     websocket.send(JSON.stringify({type: "trip_polyline", trip_uid: vehicle.dataProvider + "/" + vehicle.tripId}))
                 })
                 .addTo(map);
-        });
-      } else if (data.type == 'remove_vehicle') {
-        debug('remove');
-      } else if (data.type == 'trip_polyline') {
-        if (line !== undefined) {
-            map.removeLayer(line);
-        };
-        line = L.Polyline.fromEncoded(data.polyline, {
-            color: 'red',
-            weight: 3,
-            opacity: .9
-        }).addTo(map);
-      } else {
-        debug(data);
-      }
+    }
+
+    function getAge(vehicle) {
+      var vehicle = (new Date() - vehicle.timestamp) / 1000 / 60;
+      return vehicle;
     }
 
     // start by connecting to the web socket
