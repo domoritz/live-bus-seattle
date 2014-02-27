@@ -16,5 +16,5 @@ Clone the repository and run `python -m SimpleHTTPServer`. The open your web bro
 * [Adrian Limon](https://github.com/alimon808)
 * [oifland](https://github.com/oifland)
 * [Alex Miranda](https://github.com/amiranda222)
-* [louisgv](https://github.com/louisgv)
+* [Louis Vichy](https://github.com/louisgv)
 * [POPPOP123](https://github.com/POPPOP123)
