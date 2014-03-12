@@ -12,17 +12,17 @@ html, body {
 
 .bus-route {
   background-color: #444;
-  border-bottom-style: solid;
-  border-bottom-width: 6px;
+  /*border-bottom-style: solid;*/
+  /*border-bottom-width: 6px;*/
   color: white;
-  padding: 0px 3px;
+  /*padding: 0px 3px;*/
   font-size: 11px;
   box-sizing: content-box !important;
   -webkit-box-sizing: content-box !important;
   opacity: .8;
   text-align: center;
-  line-height: 14px;
-  margin-top: -8px;  /*So that the actual location is in the center of the marker*/
+  /*line-height: 14px;*/
+  border-radius: 50%
 }
 
 .tooltip-inner {
