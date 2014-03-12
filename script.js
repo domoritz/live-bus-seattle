@@ -34,6 +34,9 @@ $(function() {
     // the markers
     var markers = {};
 
+    // the vehicles
+    var vehicles = {};
+
     // the routeLine
     var routeLine;
 
@@ -69,7 +72,7 @@ $(function() {
                 removeVehicle(vehicle.uid);
                 return;
             }
-            if (marker == undefined) {
+            if (marker === undefined) {
                 marker = addVehicle(data.vehicle);
             }
             // update the direction
@@ -77,13 +80,19 @@ $(function() {
                 destination: vehicle.destination,
                 direction: getDir(vehicle.heading)
             }));
-            $('.bus-route').tooltip();
-            var line = L.polyline([marker.getLatLng(), [vehicle.lat, vehicle.lon]])
+            // $('.bus-route').tooltip();
+
+            // set to bus route 
+            var line = L.polyline([marker.getLatLng(), [vehicle.lat, vehicle.lon]]);
             marker.stop();
             marker.setLine(line.getLatLngs());
             marker.start();
         } else if (data.type == 'init') {
-            data.vehicles.forEach(addVehicle);
+            // data.vehicles.forEach(addVehicle);
+            $.each(data.vehicles, function(key, vehicle) {
+                var marker = addVehicle(vehicle);
+                vehicles[vehicle.uid] = {vehicle: vehicle, marker: marker};
+            });
         } else if (data.type == 'remove_vehicle') {
             removeVehicle(data.vehicle_uid);
         } else if (data.type == 'trip_polyline') {
@@ -93,7 +102,7 @@ $(function() {
             routeLine = L.Polyline.fromEncoded(data.polyline, {
                 color: 'red',
                 weight: 3,
-                opacity: .9
+                opacity: 0.9
             }).addTo(map);
         } else {
             debug("undefined");
@@ -136,7 +145,7 @@ $(function() {
             })
             //.bindPopup(popupContent)
             .on('click', function(e) {
-                websocket.send(JSON.stringify({type: "trip_polyline", trip_uid: vehicle.dataProvider + "/" + vehicle.tripId}))
+                websocket.send(JSON.stringify({type: "trip_polyline", trip_uid: vehicle.dataProvider + "/" + vehicle.tripId}));
                 // jQuery.getJSON(trip_status_url, null, function(response) {
                 //   window.alert("Bus is " + Math.round(response.data.entry.status.scheduleDeviation / 60) + " minutes late")
                 // });
@@ -145,7 +154,7 @@ $(function() {
         markers[vehicle.uid] = marker;
 
         // bind popups for all vehicles
-        $('.bus-route').tooltip();
+        // $('.bus-route').tooltip();
 
         return marker;
     }
@@ -166,6 +175,24 @@ $(function() {
         var dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW', 'N'];
         return dirs[Math.round(heading/22.5)];
     }
+
+    // zoom start event
+    // remove markers (animated and non-animated)
+    map.on('zoomstart', function(e) {
+        for (var uid in vehicles) {
+            removeVehicle(vehicles[uid].vehicle.uid);
+        }
+    });
+
+    // zoom end event
+    // add markers
+    map.on('zoomend', function(e) {
+        for (var uid in vehicles) {
+            var marker = addVehicle(vehicles[uid].vehicle);
+            marker.addTo(map);
+            vehicles[uid].marker = marker;
+        }
+    });
 
     // start by connecting to the web socket
     wsConnect();
