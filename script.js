@@ -50,6 +50,18 @@ $(function() {
         seattleTransit.addMarkers();
     });
 
+    // add markers when window  is in focus
+    $(window).on('focus', function() {
+        debug("focus");
+        seattleTransit.addMarkers();
+    });
+
+    // remove markers when windo iis out of focus
+    $(window).on('blur', function(){
+        debug("blur");
+        seattleTransit.removeMarkers();
+    });
+
     var SeattleTransit = function() {
         var vehicles = {};
         
