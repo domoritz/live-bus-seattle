@@ -53,13 +53,13 @@ $(function() {
     // add markers when window  is in focus
     $(window).on('focus', function() {
         debug("focus");
-        seattleTransit.addMarkers();
+        //seattleTransit.addMarkers();
     });
 
     // remove markers when windo iis out of focus
     $(window).on('blur', function(){
         debug("blur");
-        seattleTransit.removeMarkers();
+        //seattleTransit.removeMarkers();
     });
 
     var SeattleTransit = function() {
@@ -113,32 +113,50 @@ $(function() {
                 });
         }
 
-        return {
-            addVehicle: function(vehicle) {
-                var _trip = {};
-                var _marker = {};
+        function PopupContent(vehicle) {
                 var _body = '';
                 jQuery.each(vehicle, function(key, value){
                     _body += L.Util.template(templates.row, {key: key, value: value});
                 });
                 trip_status_url = "http://api.pugetsound.onebusaway.org/api/where/trip-for-vehicle/" + vehicle.vehicleId + ".json?key=TEST&callback=?";
                 _body += L.Util.template(templates.link, {key: "OneBusAway API", title: "Trip Status", href: trip_status_url});
-                var popupContent = L.Util.template(templates.table, {body: _body});
+                return L.Util.template(templates.table, {body: _body});
 
-                if (vehicles[vehicle.uid] === undefined) {
+        }
+
+        return {
+            addVehicle: function(vehicle) {
+                var latlng = L.latLng(vehicle.lat, vehicle.lon);
+                var line = L.polyline([latlng,latlng]);
+                vehicle.marker = Marker(vehicle, line, 1, 1).addTo(map);
+                vehicle.marker.bindPopup(PopupContent(vehicle));
+                vehicles[vehicle.uid] = {bus: vehicle};
+            },
+            
+            removeVehicle: function(vehicle) {
+                delete vehicles[vehicle.uid];
+            },
+
+            updateVehicle: function(vehicle) {
+
+                if (vehicles[vehicle.uid].trip === undefined) {
+
+                    var _trip = {};
                     TripDetails(vehicle.tripId)
-                        .done(function(result){
+                        .then(function(result){
+
                             _trip.schedule = result.data.entry.schedule;
                             _trip.status = result.data.entry.status;
                             Trip(vehicle.tripId)
-                                .done(function(result){
+                                .then(function(result){
+
                                     TripPath(result.data.entry.shapeId)
-                                        .done(function(result){
+                                        .then(function(result){
+
                                             _trip.path = L.Polyline.fromEncoded(result.data.entry.points);
                                             var tripTime = _trip.schedule.stopTimes[_trip.schedule.stopTimes.length-1].arrivalTime - _trip.schedule.stopTimes[0].departureTime;
                                             tripTime = tripTime * 1000;
 
-                                            // var tripDistance =  (_trip.status.totalDistanceAlongTrip) ? _trip.status.totalDistanceAlongTrip : _trip.path._latlngs[0].distanceTo(_trip.path._latlngs[_trip.path._latlngs.length-1]);
                                             var tripDistance =  _trip.status.totalDistanceAlongTrip;
                                             var rate = tripDistance / tripTime;
                                             var remainingTripDistance = tripDistance - _trip.status.distanceAlongTrip;
@@ -153,22 +171,25 @@ $(function() {
                                                                         return false;
                                                                 }
                                             });
+
+                                            // remove initially added marker
+                                            // if (vehicles[vehicle.uid].bus.marker !== undefined) {
+                                                // map.removeLayer(vehicles[vehicle.uid].bus.marker);
+                                            // }
+
+                                            // start marker animation
                                             vehicle.marker = Marker(vehicle, _trip.activePath, remainingTripDistance, remainingTime).addTo(map);
-                                            vehicle.marker.bindPopup(popupContent);
+                                            vehicle.marker.bindPopup(PopupContent(vehicle));
                                             vehicles[vehicle.uid] = {bus: vehicle, trip: _trip};
                                         });
                                 });
                     });
-                }
-            },
-            
-            removeVehicle: function(vehicle) {
-                delete vehicles[vehicle.uid];
-            },
+                } else {
+                    debug("update status");
 
-            updateVehicle: function(vehicle) {
-                // debug("update");
-                // to do 
+                    // get current status
+                    
+                }
             },
             
             removeMarkers: function() {
@@ -180,8 +201,7 @@ $(function() {
             addMarkers: function() {
                 $.each(vehicles, function(key, obj){
                     var _marker = obj.bus.marker;
-                    obj.trip.activePath._latlngs = _marker._latlngs;
-                    obj.bus.marker = Marker(obj.bus, obj.trip.activePath, _marker.options.distance, _marker.options.interval).addTo(map);
+                    obj.bus.marker = Marker(obj.bus, L.polyline(_marker._latlngs), _marker.options.distance, _marker.options.interval).addTo(map);
                 });
             },
             vehicles: vehicles
@@ -232,6 +252,7 @@ $(function() {
             $.each(data.vehicles, function(key, vehicle) {
                         seattleTransit.addVehicle(vehicle);
                 });
+            debug(seattleTransit);
         } else if (data.type == 'remove_vehicle') {
             seattleTransit.removeVehicle(data.vehicle_uid);
         } else if (data.type == 'trip_polyline') {
