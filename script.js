@@ -64,12 +64,12 @@ $(function() {
 
     var SeattleTransit = function() {
         var vehicles = {};
-        
+
         function TripDetails(id) {
             return $.ajax({
                             type: 'GET',
                             dataType: 'jsonp',
-                            url: "http://api.onebusaway.org/api/where/trip-details/" + id + ".json?key=TEST",
+                            url: "http://api.onebusaway.org/api/where/trip-details/" + id + ".json?key=TEST"
                         });
         }
         
@@ -77,7 +77,7 @@ $(function() {
             return $.ajax({
                                 type: 'get',
                                 dataType: 'jsonp',
-                                url: "http://api.onebusaway.org/api/where/trip/" + id + ".json?key=TEST"
+                                url: "http://api.onebusaway.org/api/where/trip/" + id + ".json?key=TEST&includeReferences=false"
                             });
         }
 
@@ -85,8 +85,28 @@ $(function() {
             return $.ajax({
                                 type: 'get',
                                 dataType: 'jsonp',
-                                url: "http://api.pugetsound.onebusaway.org/api/where/shape/"+ id + ".json?key=TEST"
+                                url: "http://api.pugetsound.onebusaway.org/api/where/shape/"+ id + ".json?key=TEST&includeReferences=false"
                             });
+        }
+
+        function BusRoute(id) {
+            return $.getJSON("bus_routes/"+id + ".geojson");
+        }
+
+        function BusStatus(id) {
+            return $.ajax({
+                            type: 'GET',
+                            dataType: 'jsonp',
+                            url: "http://api.onebusaway.org/api/where/trip-for-vehicle/" + id + ".json?key=TEST&includeReferences=false"
+                        });
+        }
+
+        function TripSchedule(id) {
+            return $.ajax({
+                            type: 'GET',
+                            dataType: 'jsonp',
+                            url: "http://api.onebusaway.org/api/where/trip-details/" + id + ".json?key=TEST&includeReferences=false"
+                        });
         }
 
         function Marker(vehicle, path, pathDistance, pathTime) {
@@ -121,75 +141,94 @@ $(function() {
                 trip_status_url = "http://api.pugetsound.onebusaway.org/api/where/trip-for-vehicle/" + vehicle.vehicleId + ".json?key=TEST&callback=?";
                 _body += L.Util.template(templates.link, {key: "OneBusAway API", title: "Trip Status", href: trip_status_url});
                 return L.Util.template(templates.table, {body: _body});
-
         }
 
         return {
-            addVehicle: function(vehicle) {
-                var latlng = L.latLng(vehicle.lat, vehicle.lon);
-                var line = L.polyline([latlng,latlng]);
-                vehicle.marker = Marker(vehicle, line, 1, 1).addTo(map);
-                vehicle.marker.bindPopup(PopupContent(vehicle));
-                vehicles[vehicle.uid] = {bus: vehicle};
+            init: function(vehicle) {
+                    var latlng = L.latLng(vehicle.lat, vehicle.lon);
+                    var line = L.polyline([latlng,latlng]);
+                    vehicle.marker = Marker(vehicle, line, 1, 1).addTo(map);
+                    vehicle.marker.bindPopup(PopupContent(vehicle));
+                    vehicles[vehicle.uid] = {bus: vehicle};
             },
             
             removeVehicle: function(vehicle) {
-                delete vehicles[vehicle.uid];
+                 delete vehicles[vehicle.uid];
+            },
+
+            animate: function(vehicle) {
+                    var _vehicle = vehicle;
+                    $.ajax({
+                        type: 'get',
+                        dataType: 'jsonp',
+                        url: "http://api.onebusaway.org/api/where/trip/" + vehicle.tripId + ".json?key=TEST&includeReferences=false",
+                        success: function(resp) {
+                            _vehicle.direction = resp.data.entry.directionId;
+                            _vehicle.shapeId = resp.data.entry.shapeId;
+                            $.ajax({
+                                type: 'get',
+                                dataType: 'jsonp',
+                                url: "http://api.pugetsound.onebusaway.org/api/where/shape/"+ _vehicle.shapeId + ".json?key=TEST&includeReferences=false",
+                                success: function(resp) {
+                                    _vehicle.path = L.Polyline.fromEncoded(resp.data.entry.points);
+
+                                    // set path direction
+                                    if (_vehicle.direction === 1)  { // inbound
+                                        var points = _vehicle.path.getLatLngs();
+                                        points.reverse();
+                                        _vehicle.path = L.polyline(points);
+                                    }
+                                    $.ajax({
+                                        type: 'GET',
+                                        dataType: 'jsonp',
+                                        url: "http://api.onebusaway.org/api/where/trip-details/" + vehicle.tripId + ".json?key=TEST&includeReferences=false",
+                                        success: function(resp) {
+                                            _vehicle.schedule = resp.data.entry.schedule;
+                                            $.ajax({
+                                                type: 'GET',
+                                                dataType: 'jsonp',
+                                                url: "http://api.onebusaway.org/api/where/trip-for-vehicle/" + vehicle.vehicleId + ".json?key=TEST&includeReferences=false",
+                                                success: function(resp) {
+                                                    _vehicle.status = resp.data.entry.status;
+
+                                                        // calculate average rate
+                                                        _vehicle.pathTime = 1000 * (_vehicle.schedule.stopTimes[_vehicle.schedule.stopTimes.length-1].arrivalTime - _vehicle.schedule.stopTimes[0].departureTime);
+                                                        _vehicle.pathDistance = _vehicle.status.totalDistanceAlongTrip;
+                                                        _vehicle.activePath = _vehicle.path;
+                                                        _vehicle.remainingDistance = _vehicle.status.totalDistanceAlongTrip - _vehicle.status.distanceAlongTrip;
+                                                        _vehicle.remainingTime = (_vehicle.remainingDistance / _vehicle.status.totalDistanceAlongTrip) * _vehicle.pathTime;
+                                                        // debug("time = " + _vehicle.pathTime + ", distance=" + _vehicle.pathDistance + ", remaining=" + _vehicle.remainingDistance);
+                                                        var start = _vehicle.activePath._latlngs[0];
+                                                        $.each(_vehicle.activePath._latlngs, function(index, point){
+                                                                            if ( start.distanceTo(point) > _vehicle.status.distanceAlongTrip ) {
+                                                                                    _vehicle.activePath.spliceLatLngs(0, index);
+                                                                                    return false;
+                                                                            }
+                                                        });
+
+                                                        // remove old marker
+                                                        map.removeLayer(vehicles[_vehicle.uid].bus.marker);
+
+                                                        // debug(_vehicle);
+                                                        _vehicle.marker = Marker(_vehicle, _vehicle.activePath, _vehicle.remainingDistance, _vehicle.remainingTime);
+                                                        // add marker
+                                                        _vehicle.marker.addTo(map);
+                                                        delete vehicles[_vehicle.uid];
+                                                        vehicles[_vehicle.uid] = {bus: _vehicle};
+                                                }
+                                            });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
             },
 
             updateVehicle: function(vehicle) {
-
-                if (vehicles[vehicle.uid].trip === undefined) {
-
-                    var _trip = {};
-                    TripDetails(vehicle.tripId)
-                        .then(function(result){
-
-                            _trip.schedule = result.data.entry.schedule;
-                            _trip.status = result.data.entry.status;
-                            Trip(vehicle.tripId)
-                                .then(function(result){
-
-                                    TripPath(result.data.entry.shapeId)
-                                        .then(function(result){
-
-                                            _trip.path = L.Polyline.fromEncoded(result.data.entry.points);
-                                            var tripTime = _trip.schedule.stopTimes[_trip.schedule.stopTimes.length-1].arrivalTime - _trip.schedule.stopTimes[0].departureTime;
-                                            tripTime = tripTime * 1000;
-
-                                            var tripDistance =  _trip.status.totalDistanceAlongTrip;
-                                            var rate = tripDistance / tripTime;
-                                            var remainingTripDistance = tripDistance - _trip.status.distanceAlongTrip;
-                                            var remainingTime = remainingTripDistance / rate;
-                                            _trip.activePath = _trip.path;
-                                            
-                                            // start of path
-                                            var start = _trip.activePath._latlngs[0];
-                                            $.each(_trip.activePath._latlngs, function(index, point){
-                                                                if ( start.distanceTo(point) > _trip.status.distanceAlongTrip ) {
-                                                                        _trip.activePath.spliceLatLngs(0, index);
-                                                                        return false;
-                                                                }
-                                            });
-
-                                            // remove initially added marker
-                                            // if (vehicles[vehicle.uid].bus.marker !== undefined) {
-                                                // map.removeLayer(vehicles[vehicle.uid].bus.marker);
-                                            // }
-
-                                            // start marker animation
-                                            vehicle.marker = Marker(vehicle, _trip.activePath, remainingTripDistance, remainingTime).addTo(map);
-                                            vehicle.marker.bindPopup(PopupContent(vehicle));
-                                            vehicles[vehicle.uid] = {bus: vehicle, trip: _trip};
-                                        });
-                                });
-                    });
-                } else {
-                    debug("update status");
-
-                    // get current status
-                    
-                }
+                    // debug("update vehicle");
+                    // adjust animated marker
+                    // to do
             },
             
             removeMarkers: function() {
@@ -232,17 +271,20 @@ $(function() {
       var data = JSON.parse(evt.data);
 
       if (data.type == 'update_vehicle') {
+
             var vehicle = data.vehicle;
+            debug("update vehicle");
             if (getAge(vehicle) > 5) {
                 seattleTransit.removeVehicle(vehicle.uid);
                 return;
             }
             if (seattleTransit.vehicles[vehicle.uid] === undefined) {
-                seattleTransit.addVehicle(vehicle);
+                seattleTransit.init(vehicle);
+            } else if (seattleTransit.vehicles[vehicle.uid].bus.activePath === undefined) {
+                seattleTransit.animate(vehicle);
             } else {
                 seattleTransit.updateVehicle(vehicle);
             }
-
             // update the direction
             // $(marker._icon).attr('title', L.Util.template(templates.busMarkerTitle, {
             //     destination: vehicle.destination,
@@ -250,9 +292,9 @@ $(function() {
             // }));
         } else if (data.type == 'init') {
             $.each(data.vehicles, function(key, vehicle) {
-                        seattleTransit.addVehicle(vehicle);
+                        seattleTransit.init(vehicle);
                 });
-            debug(seattleTransit);
+            // debug(seattleTransit);
         } else if (data.type == 'remove_vehicle') {
             seattleTransit.removeVehicle(data.vehicle_uid);
         } else if (data.type == 'trip_polyline') {
